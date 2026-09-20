@@ -1,0 +1,12 @@
+# Default values for argo-cd-apps.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+environment: ""
+
+namespace: ""
+
+# This option is for ephemeral environment that will be created per feature/branch
+featureBranchEnv:
+  enabled: false
+ 

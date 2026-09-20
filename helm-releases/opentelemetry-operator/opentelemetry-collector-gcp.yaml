@@ -1,0 +1,91 @@
+# OpenTelemetry Collector + Instrumentation for GCP
+# Apply after opentelemetry-operator is running:
+#   kubectl apply -f opentelemetry-collector-gcp.yaml
+#
+# KEY CHANGE from OCI: exporter changed from dead Tempo to Cloud Trace
+# On OCI: exporters.otlp.endpoint = http://tempo-distributor.tempo.svc:4317
+#          Tempo has been fully dead for 2+ years - all traces silently discarded
+# On GCP: exporters.googlecloud.trace - traces go to Cloud Trace (free tier generous)
+#
+# Requires Workload Identity binding so the collector SA can write to Cloud Trace:
+#   gcloud projects add-iam-policy-binding core-platform-workload-prod \
+#     --member="serviceAccount:core-platform-workload-prod.svc.id.goog[opentelemetry-operator/opentelemetry-collector]" \
+#     --role="roles/cloudtrace.agent"
+
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector 
+metadata:
+  name: opentelemetry
+  namespace: opentelemetry-operator
+spec:
+  mode: daemonset
+  serviceAccount: opentelemetry-collector  # needs Workload Identity binding above
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    extensions:
+      health_check:
+      pprof:
+      zpages:
+    exporters:
+      googlecloud:
+        project: core-platform-workload-prod
+        trace:
+          # Uses Workload Identity - no key needed
+    service:
+      extensions: [health_check, pprof, zpages]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: []
+          exporters: [googlecloud]
+      telemetry:
+        logs:
+          level: info  # was "debug" on OCI - reduced for production
+
+---
+# Instrumentation CR - copied verbatim from OCI (auto-inject into nodejs pods)
+# Same 25% sampling rate, same images, same propagators
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: nodejs-instrumentation
+  namespace: core-platform
+spec:
+  exporter:
+    endpoint: http://opentelemetry-collector.opentelemetry-operator:4317
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: parentbased_traceidratio
+    argument: "0.25"
+  env:
+    - name: OTEL_METRICS_EXPORTER
+      value: otlp
+    - name: OTEL_TRACES_EXPORTER
+      value: otlp
+    - name: OTEL_LOGS_EXPORTER
+      value: otlp
+  nodejs:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.39.1
+    resourceRequirements:
+      limits:
+        cpu: 500m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+  python:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:0.39b0
+    resourceRequirements:
+      limits:
+        cpu: 500m
+        memory: 32Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi

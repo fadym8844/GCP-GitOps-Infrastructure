@@ -1,0 +1,41 @@
+# RabbitMQ Cluster Operator GCP install values
+# Not Helm-managed on OCI - was raw kubectl/ArgoCD
+# Building as proper Helm for GCP
+#
+# Images confirmed from live OCI cluster:
+#   Cluster operator:  bitnamilegacy/rabbitmq-cluster-operator:2.0.0-scratch-r5
+#   Topology operator: bitnamilegacy/rmq-messaging-topology-operator:1.9.0-scratch-r0
+#   RabbitMQ server:   bitnamilegacy/rabbitmq:3.10.11-debian-11-r4
+#
+# WHY image pinning matters: without this, Bitnami chart pulls its current
+# default which is likely RabbitMQ 3.12 or 3.13 - different major version
+# from OCI. Queue/exchange formats, default settings, and plugin APIs differ
+# between major versions. Pinning ensures GCP runs exactly what OCI runs.
+#
+# Install command:
+#   helm repo add bitnami https://charts.bitnami.com/bitnami
+#   helm install rabbitmq-operator bitnami/rabbitmq-cluster-operator \
+#     -n rabbitmq-system --create-namespace \ 
+#     -f values-rabbitmq-operator-gcp.yaml
+
+fullnameOverride: "rabbitmq-operator"
+
+clusterOperator:
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/rabbitmq-cluster-operator
+    tag: "2.0.0-scratch-r5"
+
+msgTopologyOperator:
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/rmq-messaging-topology-operator
+    tag: "1.9.0-scratch-r0"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

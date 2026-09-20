@@ -1,0 +1,26 @@
+{{- if .Values.rabbitmq.virtualHost.create -}}
+apiVersion: rabbitmq.com/v1beta1
+kind: Vhost
+metadata:
+  name: {{ .Values.environment }}
+  namespace: rabbitmq-system
+spec:
+  name: {{ .Values.environment }} # vhost name; required and cannot be updated
+  rabbitmqClusterReference:
+    name: core-platform # rabbitmqCluster must exist in the same namespace as this resource
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Permission
+metadata:
+  name: core-platform-{{ .Values.environment }}
+  namespace: rabbitmq-system
+spec:
+  vhost: "{{ .Values.environment }}"
+  user: core-platform-service
+  permissions:
+    write: ".*"
+    configure: ".*" 
+    read: ".*"
+  rabbitmqClusterReference:
+    name: core-platform
+{{- end -}}

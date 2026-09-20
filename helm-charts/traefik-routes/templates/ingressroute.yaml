@@ -1,0 +1,43 @@
+{{- if .Values.ingressRoute.enabled }}
+{{- $entryPoints := .Values.ingressRoute.entryPoints | default (list) }}
+{{- $tlsSecret := .Values.ingressRoute.tlsSecretName | default "" }}
+{{- $middlewares := .Values.ingressRoute.middlewares | default (list) }}
+
+{{- range $name, $hostCfg := .Values.ingressRoute.hosts }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ printf "%s-%s" $.Release.Name $name | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $.Release.Name }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+spec:
+  entryPoints:
+{{- range $ep := $entryPoints }}
+    - {{ $ep }}
+{{- end }}
+ 
+{{- $hostTlsSecret := $hostCfg.tlsSecretName | default $tlsSecret }}
+{{- if $hostTlsSecret }}
+  tls:
+    secretName: {{ $hostTlsSecret }}
+{{- end }}
+
+  routes:
+{{- range $r := $hostCfg.routes }}
+    - kind: Rule
+      match: "Host(`{{ $hostCfg.host }}`) && PathPrefix(`{{ $r.pathPrefix }}`)"
+{{- if $middlewares }}
+      middlewares:
+{{- range $m := $middlewares }}
+        - name: {{ $m.name }}
+{{- end }}
+{{- end }}
+      services:
+        - name: {{ $r.service }}
+          port: {{ $r.port }}
+{{- end }}
+{{- end }}
+{{- end }}

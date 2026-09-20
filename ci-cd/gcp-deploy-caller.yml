@@ -1,0 +1,12 @@
+on:
+  push:
+    branches:
+      - prod-gcp
+  pull_request:
+    branches: 
+      - prod-gcp
+jobs:
+  call-build-push-update-tag-gcp-workflow:
+    uses: madkol/github-workflows/.github/workflows/build-push-update-tag-gcp-reusable.yml@main
+    secrets: inherit
+ 

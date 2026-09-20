@@ -1,0 +1,23 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+
+billing_account = "000000-000000-000000"   # CNTXT account - confirm the link test above succeeds before applying
+
+# Use folder_id if you have an org folder structure, otherwise org_id.
+# folder_id = "123456789012"
+org_id      = "123456789012"
+
+# Fresh project for the production database - confirmed decision, not
+# adopting the existing Doha-based core-platform-dr-db. Default already matches
+# what was confirmed; only change if you pick a different project ID.
+db_project_id = "core-platform-database-dr-prod"
+
+github_owner = "madkol"
+
+allowed_repositories = [
+  "madkol/Infrastructure",
+  # add the service repos that build images:
+  # "madkol/core-platform-app",
+  # "madkol/core-platform-auth",
+  # "madkol/core-platform-frontend",
+]
+ 

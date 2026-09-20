@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: core-platform-admin-tls
+  namespace: core-platform
+spec:
+  secretName: core-platform-admin-tls
+  issuerRef:
+    name: acme-http-issuer-traefik
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - admin.core-platform.com
+ 

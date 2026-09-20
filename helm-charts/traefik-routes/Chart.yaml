@@ -1,0 +1,7 @@
+apiVersion: v2
+name: traefik-routes
+description: Traefik IngressRoute resources for core-platform-dev
+type: application
+version: 0.1.0
+appVersion: "1.0"
+ 

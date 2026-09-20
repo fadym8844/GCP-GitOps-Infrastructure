@@ -1,0 +1,11 @@
+apiVersion: v2
+name: gateway-routes
+description: >
+  GKE Gateway API replacement for helm-charts/traefik-routes. Same
+  hosts/routes values shape as the original chart on purpose — the real
+  routing table translates over with the paths, services, and ports
+  unchanged, only the rendered resource kind changes (IngressRoute -> Gateway
+  + HTTPRoute).
+version: 0.1.0
+appVersion: "1.0"
+ 

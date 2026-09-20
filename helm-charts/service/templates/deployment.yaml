@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "service.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "service.selectorLabels" . | nindent 6 }} 
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/env-configmap.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "service.selectorLabels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: oci-regcred
+      serviceAccountName: {{ include "service.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+    {{- if .Values.secrets }}
+      volumes:
+    {{ include "service.secrets.volumes" . | nindent 6 }}
+    {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "service.image.repository" . }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.serviceContainerCommand }}
+          command:
+            {{- toYaml .Values.serviceContainerCommand | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          {{- if .Values.healthCheckEnabled }}
+          livenessProbe:
+            httpGet:
+              path: /{{ .Release.Name }}/healthz
+              port: http
+            initialDelaySeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /{{ .Release.Name }}/healthz
+              port: http
+          {{- end }}
+          envFrom:
+          - configMapRef:
+              name: {{ include "service.fullname" . }}-config
+          {{- if .Values.envSecret }}
+          - secretRef:
+              name: {{ include "service.fullname" . }}-env-secret
+          {{- end }}
+          {{- if .Values.envSecretPlainText }}
+          - secretRef:
+              name: {{ include "service.fullname" . }}-env-plain-text-secret # envSecretPlainText will take presence here which is used to overwrite feature branch env secrets
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.secrets }}
+          volumeMounts:
+          {{- end }}
+{{ include "service.secrets.volumeMounts" . | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

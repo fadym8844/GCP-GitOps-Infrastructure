@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: disable-gke-noise
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+  - name: disable-gke-noise
+    rules:
+    - alert: KubeProxyDown
+      expr: "false"
+      for: 1000d
+    - alert: TargetDown
+      expr: |
+        absent(up{job="coredns"}) or
+        (up{job="coredns"} == 0)
+      for: 1000d
+ 

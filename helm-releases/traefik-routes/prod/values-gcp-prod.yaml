@@ -1,0 +1,96 @@
+# Traefik routes for GCP - exact mirror of OCI production
+# Source: helm-releases/traefik-routes/prod/values-core-platform-prod.yaml
+# Plus 3 additional routes confirmed from live IngressRoute inspection:
+#   - cd.core-platform.com (argocd)
+#   - monitoring.core-platform.com (grafana)
+#   - rabbitmq.core-platform.com (rabbitmq management UI)
+#
+# Install command:
+#   helm install traefik-routes ~/Infrastructure/GCP/helm-charts/traefik-routes \
+#     -n core-platform \
+#     -f ~/Infrastructure/GCP/helm-releases/traefik-routes/prod/values-core-platform-gcp-prod.yaml
+
+ingressRoute:
+  enabled: true
+  entryPoints: 
+    - web
+    - websecure
+
+  tlsSecretName: core-platform-traefik-cert-prod
+
+  middlewares:
+    - name: redirect-to-https
+
+  hosts:
+    api:
+      host: api.core-platform.com
+      routes:
+        - pathPrefix: /iam
+          service: iam-service
+          port: 80
+        - pathPrefix: /auth
+          service: auth-service
+          port: 80
+        - pathPrefix: /media
+          service: media-service
+          port: 80
+        - pathPrefix: /admin
+          service: admin-service
+          port: 80
+        - pathPrefix: /anonymous
+          service: anonymous-service
+          port: 80
+        - pathPrefix: /app
+          service: app-service
+          port: 80
+        - pathPrefix: /webhook
+          service: webhook-service
+          port: 80
+        - pathPrefix: /analytics
+          service: analytics-service
+          port: 80
+
+    app:
+      host: app.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: frontend-service
+          port: 80
+
+    admin:
+      host: admin.core-platform.com
+      tlsSecretName: core-platform-admin-tls
+      routes:
+        - pathPrefix: /
+          service: admin-frontend-service
+          port: 80
+
+    website:
+      host: core-platform.com
+      tlsSecretName: core-platform-website-tls
+      routes:
+        - pathPrefix: /
+          service: website-service
+          port: 80
+
+    website-www:
+      host: www.core-platform.com
+      tlsSecretName: core-platform-website-tls
+      routes:
+        - pathPrefix: /
+          service: website-service
+          port: 80
+
+    ratbiplus:
+      host: ratbiplus.core-platform.com
+      tlsSecretName: core-platform-ratbiplus-tls
+      routes:
+        - pathPrefix: /
+          service: ratbiplus-service
+          port: 80
+
+# --- Additional routes confirmed from live OCI IngressRoute inspection ---
+# These are in separate namespaces so installed separately (see below)
+# argocd route: kubectl apply -f traefik-routes-extra-gcp.yaml
+# monitoring route: kubectl apply -f traefik-routes-extra-gcp.yaml
+# rabbitmq route: kubectl apply -f traefik-routes-extra-gcp.yaml

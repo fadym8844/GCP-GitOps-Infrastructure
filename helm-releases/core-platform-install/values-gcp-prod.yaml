@@ -1,0 +1,99 @@
+# Install values for the gcp ApplicationSet release on GKE.
+# Base content is identical to the confirmed real values (helm get values
+#  -n argocd) - only two things actually change, both marked below.
+# Everything else (service URLs, DB connection shape, Sentry sampling,
+# container command) is cloud-agnostic and stays exactly as-is.
+
+autoscaling:
+  enabled: false
+  maxReplicas: 1
+  minReplicas: 1
+
+env:
+  ADMIN_EMAIL:
+  ADMIN_SERVICE: http://admin-service 
+  AGGREGATOR_SERVICE: http://aggregator-service
+  ALPACA_SERVICE: http://alpaca-service
+  ANONYMOUS_SERVICE: http://anonymous-service
+  APP_BASE_URL: 
+  APP_SERVICE: http://app-service
+  ARCHIVE_SERVICE: http://archive-service
+  AUTH_SERVICE: http://auth-service
+  # CHANGED — was 10.10.30.111 (OCI private IP). Real value only exists
+  # once `terraform apply` creates the Cloud SQL instance in
+  #   terraform output -raw cloudsql_private_ip
+  DB_HOST: ""
+  DB_LOGGING: "false"
+  DB_PORT: "3306"
+  DB_TYPE: mysql
+  DB_USER: 
+  DB_USERNAME:
+  EMPLOYEE_SERVICE: http://employee-service
+  HOST: 0.0.0.0
+  IAM_SERVICE: http://iam-service
+  JADWA_SERVICE: http://jadwa-service
+  LOCAL: "false"
+  LOG_LEVEL: debug
+  MEDIA_SERVICE: http://media-service
+  NODE_ENV: PROD
+  NOTIFIER_SERVICE: http://notifier-service
+  ORIGIN_URL: 
+  PAYMENT_SERVICE: http://payment-service
+  PORT: "80"
+  PORTFOLIO_SERVICE: http://portfolio-service
+  SENTRY_PROFILES_SAMPLE_RATE: "0.01"
+  SENTRY_TRACES_SAMPLE_RATE: "0.01"
+  SURVEY_SERVICE: http://survey-service
+  USER_SERVICE: http://user-service
+  WEBHOOK_SERVICE: http://webhook-service
+  WORLD_CHECK_SERVICE: http://world-check-service
+  acquireTimeout: "36000000"
+  connectTimeout: "36000000"
+
+# UNCHANGED — still ESO-managed, null placeholders filled at runtime.
+# Note: this is a DIFFERENT mechanism from the per-service prod.yaml files
+# (which keep their values inline, per instruction). This block was
+# already externalized before the migration, not something to convert
+# either direction without a separate explicit decision.
+envSecret:
+  AMQP_URI: null
+  API_SECRET: null
+  DB_PASSWORD: null
+  MONGO_DB_URI: null
+  REDIS_URI: null
+  SESSION_SECRET: null
+
+environment: prod
+organization: 
+
+externalSecretVaultName: gcp-secret-manager-store # pending: needs a
+  # GCP Secret Manager equivalent ClusterSecretStore if ESO is kept for the
+  # fields still above (envSecret block) - separate decision, see README.
+
+# REMOVED (not just disabled) — Gateway API's own chart (gateway-routes)
+# handles all routing now; this chart's ingress.yaml template was deleted
+# entirely rather than left dormant.
+# ingress: — intentionally absent
+
+# CHANGED — decouples Slack notifications from the shared "prod" name,
+# so this doesn't collide with OCI's existing deployments-prod channel.
+slackChannel: deployments-gcp-prod
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 200Mi
+
+serviceContainerCommand:
+  - node
+  - --max-old-space-size=1024
+  - ./index.js
+rabbitmq:
+  virtualHost:
+    create: false
+instrumentation:
+  enabled: false
+namespace: 

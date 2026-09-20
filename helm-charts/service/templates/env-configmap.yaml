@@ -1,0 +1,12 @@
+{{- if .Values.env -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "service.fullname" . }}-config
+  namespace: {{ $.Release.Namespace }}
+data:
+  API_PREFIX: "/{{ .Release.Name }}"
+  X_SENDER: "{{ .Release.Name }}-service"
+{{ toYaml .Values.env | indent 2 }}
+{{- end -}}
+ 

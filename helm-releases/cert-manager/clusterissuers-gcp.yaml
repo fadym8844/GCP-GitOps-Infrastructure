@@ -1,0 +1,20 @@
+# ClusterIssuers for GCP - same as OCI
+# Uses Traefik for HTTP-01 ACME challenges - same as OCI acme-http-issuer-traefik
+# Apply after cert-manager AND Traefik are running:
+#   kubectl apply -f clusterissuers-gcp.yaml
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: acme-http-issuer-traefik
+spec:
+  acme:
+    email: m.fady@core-platform.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: acme-http-issuer-traefik-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: traefik
+ 

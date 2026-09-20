@@ -1,0 +1,38 @@
+# OpenTelemetry Operator GCP install values
+# Version: v0.79.0 (confirmed from live OCI cluster)
+# Chart: opentelemetry-operator-0.32.0
+#
+# Changes from OCI:
+#   - Collector config: exporter changed from dead Tempo to Cloud Trace
+#     (Tempo has been fully dead on OCI for 2+ years - traces never stored)
+#
+# Install command:
+#   helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+#   helm install opentelemetry-operator open-telemetry/opentelemetry-operator --version 0.32.0 \
+#     -n opentelemetry-operator --create-namespace \
+#     -f values-opentelemetry-operator-gcp.yaml
+#
+# After install, apply the collector and instrumentation:
+#   kubectl apply -f opentelemetry-collector-gcp.yaml
+
+admissionWebhooks:
+  autoGenerateCert: true
+  certManager:
+    enabled: false 
+  create: true
+
+manager:
+  image:
+    repository: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
+    tag: v0.79.0  # confirmed from live OCI cluster
+  collectorImage:
+    repository: otel/opentelemetry-collector-contrib
+    tag: 0.79.0   # confirmed from live OCI cluster (--collector-image flag)
+  verticalPodAutoscaler:
+    enabled: true
+    maxAllowed:
+      cpu: 200m
+      memory: 100Mi
+    minAllowed:
+      cpu: 200m
+      memory: 100Mi

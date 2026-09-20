@@ -1,0 +1,77 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {{ .Values.organization }}-applications-{{ .Values.environment }}
+  namespace: argocd
+  labels:
+    {{- include "core-platform.labels" . | nindent 4 }}
+spec:
+  generators:
+  - git:
+      repoURL: git@github.com:madkol/Infrastructure.git
+      revision: HEAD
+      directories:
+      # path to the directory that includes directories to read as variables
+      - path: GCP/helm-releases/{{ .Values.organization }}/*
+      - path: GCP/helm-releases/{{ .Values.organization }}/shared
+        exclude: true
+  template:
+    metadata:
+      # basename is the name of the directory not the full path 
+      name: '{{ `{{ path.basename }}` }}-{{ .Values.environment }}'
+      annotations:
+        notifications.argoproj.io/subscribe.on-sync-failed.slack: {{ .Values.slackChannel | default (printf "deployments-%s" .Values.environment) }}
+        notifications.argoproj.io/subscribe.on-health-degraded.slack: {{ .Values.slackChannel | default (printf "deployments-%s" .Values.environment) }}
+        notifications.argoproj.io/subscribe.on-deployed.slack: {{ .Values.slackChannel | default (printf "deployments-%s" .Values.environment) }}
+    spec:
+      project: default
+      source:
+        repoURL: git@github.com:madkol/Infrastructure.git
+        targetRevision: HEAD
+        path: GCP/helm-charts/service
+        helm:
+          releaseName: '{{ `{{ path.basename }}` }}'
+          valueFiles:
+          - /GCP/helm-releases/{{ .Values.organization }}/defaults.values.yaml
+          - /GCP/helm-releases/{{ .Values.organization }}/defaults-{{ .Values.environment }}.values.yaml
+          - /GCP/helm-releases/{{ .Values.organization }}/{{ `{{ path.basename }}` }}/values.yaml
+{{- if .Values.featureBranchEnv.enabled }}
+          - /GCP/helm-releases/{{ .Values.organization }}/{{ `{{ path.basename }}` }}/dev.yaml # Adding dev variables in case of featureBranchEnv with lower presence
+{{- end }}
+          - /GCP/helm-releases/{{ .Values.organization }}/{{ `{{ path.basename }}` }}/{{ .Values.environment }}.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: {{ .Values.namespace | default .Values.organization }}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        - Validate=false
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+      ignoreDifferences:
+      # To not conflict with HPA
+      - group: apps
+        kind: Deployment
+        jsonPointers:
+        - /spec/replicas
+        - /status/terminatingReplicas
+      - group: apps
+        kind: ReplicaSet
+        jsonPointers:
+        - /status/terminatingReplicas
+      # for the specified managedFields managers
+      - group: "*"
+        kind: "*"
+        managedFieldsManagers:
+        - kube-controller-manager
+      - group: autoscaling
+        kind: HorizontalPodAutoscaler
+        jsonPointers:
+        - /status

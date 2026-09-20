@@ -1,0 +1,7 @@
+ingressRoute:
+  enabled: false
+  entryPoints: []
+  tlsSecretName: ""
+  middlewares: []
+  hosts: {}
+ 

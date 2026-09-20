@@ -1,0 +1,108 @@
+# Translated directly from helm-releases/traefik-routes/prod/values-core-platform-prod.yaml
+# Every host, path, backend service, and port below is unchanged from the
+# confirmed live Traefik config — only the rendered resource kind differs
+# (IngressRoute -> Gateway + HTTPRoute). Verify this still matches
+# your current repo before applying — that file showed as locally modified
+# in git status earlier and the diff was never resolved.
+
+gateway:
+  enabled: true
+  ipName: core-platform-gateway-ip
+  # Four distinct certs, confirmed from the real cert-manager Certificate
+  # resources - one multi-SAN cert for the six app-facing hosts, three
+  # separate single-domain certs for cd/monitoring/rabbitmq.
+  tlsSecretNames:
+    - core-platform-gateway-cert-prod   # covers all 6 app-facing hosts below
+    - cd-gateway-cert
+    - monitoring-gateway-cert-prod
+    - rabbitmq-gateway-cert-prod
+  httpRedirect: true 
+
+routes:
+  enabled: true
+  hosts:
+    api:
+      host: api.core-platform.com
+      routes:
+        - pathPrefix: /iam
+          service: iam-service
+          port: 80
+        - pathPrefix: /auth
+          service: auth-service
+          port: 80
+        - pathPrefix: /media
+          service: media-service
+          port: 80
+        - pathPrefix: /admin
+          service: admin-service
+          port: 80
+        - pathPrefix: /anonymous
+          service: anonymous-service
+          port: 80
+        - pathPrefix: /app
+          service: app-service
+          port: 80
+        - pathPrefix: /webhook
+          service: webhook-service
+          port: 80
+        - pathPrefix: /analytics
+          service: analytics-service
+          port: 80
+
+    app:
+      host: app.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: frontend-service
+          port: 80
+
+    admin:
+      host: admin.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: admin-frontend-service
+          port: 80
+
+    website:
+      host: core-platform.com
+      routes:
+        - pathPrefix: /
+          service: website-service
+          port: 80
+
+    website-www:
+      host: www.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: website-service
+          port: 80
+
+    ratbiplus:
+      host: ratbiplus.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: ratbiplus-service
+          port: 80
+
+    # --- confirmed via kubectl get ingressroute -o yaml, below this line ---
+
+    argocd:
+      host: cd.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: argocd-server
+          port: 80
+
+    monitoring:
+      host: monitoring.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: monitoring-grafana
+          port: 80
+
+    rabbitmq:
+      host: rabbitmq.core-platform.com
+      routes:
+        - pathPrefix: /
+          service: core-platform # confirmed - the actual service is named "core-platform", not "core-platform-server"
+          port: 15672

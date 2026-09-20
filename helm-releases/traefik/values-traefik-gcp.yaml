@@ -1,0 +1,91 @@
+# Traefik GCP install values
+# Exact mirror of OCI production Traefik configuration
+# Image confirmed: traefik:v3.6.5
+# Chart: traefik-38.0.1
+#
+# Install command:
+#   helm repo add traefik https://traefik.github.io/charts
+#   helm install traefik traefik/traefik --version 38.0.1 \
+#     -n traefik --create-namespace \
+#     -f values-traefik-gcp.yaml 
+#
+# After install, apply the middleware and IngressRoutes:
+#   kubectl apply -f traefik-middleware-gcp.yaml
+#   helm install traefik-routes ~/Infrastructure/GCP/helm-charts/traefik-routes \
+#     -n core-platform -f ~/Infrastructure/GCP/helm-releases/traefik-routes/prod/values-core-platform-gcp-prod.yaml
+
+image:
+  tag: v3.6.5  # confirmed from live OCI cluster
+
+deployment:
+  replicas: 1
+
+# Service type LoadBalancer - GKE provisions a Google Cloud TCP/UDP NLB
+# This is what gives Traefik its external IP on GCP
+# Same as OCI which uses an OCI LB
+service:
+  type: LoadBalancer
+  annotations:
+    networking.gke.io/load-balancer-type: "External"
+    # After terraform apply, fill in the static IP:
+    # terraform output traefik_lb_ip
+    cloud.google.com/load-balancer-ip: "34.166.50.117"
+    # This prevents the IP from changing if Traefik is reinstalled
+
+ports:
+  web:
+    port: 80
+    exposedPort: 80
+    protocol: TCP
+  websecure:
+    port: 443
+    exposedPort: 443
+    protocol: TCP
+    tls:
+      enabled: true
+
+# TLS termination at Traefik level using cert-manager issued secrets
+# Same pattern as OCI - cert-manager issues the certs, Traefik uses the secrets
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true  # needed so traefik (n: traefik) can read secrets in core-platform, monitoring, rabbitmq-system
+    allowExternalNameServices: true
+  kubernetesIngress:
+    enabled: true  # enabled for cert-manager HTTP-01 ACME challenges
+
+# Cert-manager integration - same as OCI
+# Traefik reads TLS secrets created by cert-manager Certificate resources
+certificatesResolvers: {}
+
+logs:
+  general:
+    level: ERROR
+  access:
+    enabled: false
+
+metrics:
+  prometheus:
+    enabled: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# RBAC - needed for cross-namespace secret access
+rbac:
+  enabled: true
+
+# Service account
+serviceAccount:
+  name: traefik
+
+# Static IP — reserved via Terraform (terraform output traefik_lb_ip)
+# Must use spec.loadBalancerIP not annotation for GKE external LB
+service:
+  spec:
+    loadBalancerIP: "34.166.50.117"

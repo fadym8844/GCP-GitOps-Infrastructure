@@ -1,0 +1,45 @@
+{{- if .Values.featureBranchEnv.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mysql-restore
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "core-platform.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+spec:
+  template:
+    spec:
+      containers:
+        - name: mysql-restore
+          image: mysql:8-debian
+          imagePullPolicy: Always
+          command: 
+            - /bin/bash
+            - -c
+            - |
+              apt update
+              apt install awscli -y
+              aws --endpoint-url https://axvp4vawnqyw.compat.objectstorage.me-jeddah-1.oraclecloud.com s3 cp s3://backup-downloader-app/core-platform-dump.sql core-platform-dump.sql
+              mysql -h {{ .Release.Namespace }}-mysql -u root --password=$MYSQL_ROOT_PASSWORD < core-platform-dump.sql
+          env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Namespace }}-mysql
+                key: mysql-root-password
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: backup-downloader-secret
+                key: access-key
+          - name: AWS_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: backup-downloader-secret
+                key: access-secret
+          - name: AWS_DEFAULT_REGION
+            value: me-jeddah-1
+      restartPolicy: OnFailure
+{{- end -}}

@@ -1,0 +1,15 @@
+# Traefik middleware for GCP
+# Exact copy of OCI production middleware
+# Apply after Traefik is running:
+#   kubectl apply -f traefik-middleware-gcp.yaml
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-to-https
+  namespace: core-platform
+spec:
+  redirectScheme: 
+    scheme: https
+    permanent: true

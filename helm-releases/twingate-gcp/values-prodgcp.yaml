@@ -1,0 +1,35 @@
+# Uses Twingate's own public Helm chart directly - not a core-platform-authored
+# chart, same as on OKE (helm.sh/chart=connector-0.1.18, confirmed from the
+# live deployment). Nothing to build here except values pointing at new
+# credentials.
+#
+# Chart source (Twingate's official repo):
+#   helm repo add twingate https://twingate.github.io/helm-charts
+#   helm install twingate-gcp-connector twingate/connector -f this-file.yaml
+#
+# TODO before deploying - both only obtainable from the Twingate console,
+# under a new Remote Network named "core-platformprodgcp":
+#   1. env.TWINGATE_URL below - the URL Twingate shows for the new network
+#   2. The access-token / refresh-token secret - Twingate's console gives you
+#      the exact `kubectl create secret` command when you generate a new
+#      connector; run that separately before this chart installs, same as
+#      how twingate-sincere-chihuahua-connector's Secret exists today.
+
+replicaCount: 2 # matches the confirmed live setup exactly 
+
+image:
+  repository: twingate/connector
+  tag: "1"
+
+resources:
+  requests:
+    cpu: 50m # matches confirmed live values exactly
+    memory: 200Mi
+
+env:
+  TWINGATE_URL: "https://core-platformprodgcp.twingate.com" # confirm exact URL from the console
+  TWINGATE_LOG_LEVEL: "3"
+
+# References the Secret created via the console's kubectl command -
+# TODO: confirm the exact secret name once generated.
+envFromSecretName: twingate-core-platformprodgcp-connector

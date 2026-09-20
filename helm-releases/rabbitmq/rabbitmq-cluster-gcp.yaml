@@ -1,0 +1,50 @@
+# RabbitMQ cluster and permission manifests for GCP
+# Apply after rabbitmq-operator is running:
+#   kubectl apply -f rabbitmq-cluster-gcp.yaml
+#
+# Mirrors confirmed OCI production setup exactly:
+#   - Cluster named "core-platform" (same as OCI)
+#   - Default vhost "/" (confirmed from Permission resource on OCI)
+#   - User "core-platform-service" with full configure/read/write on "/"
+#   - 3 replicas, 1 CPU / 4Gi (confirmed from resource dump)
+#   - Same resource requests as OCI
+ 
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: core-platform
+  namespace: rabbitmq-system
+spec:
+  replicas: 3
+  image: docker.io/bitnamilegacy/rabbitmq:3.10.11-debian-11-r4
+  resources:
+    requests:
+      cpu: "500m"
+      memory: 2Gi
+    limits:
+      cpu: "500m"
+      memory: 2Gi
+  persistence:
+    storageClassName: standard-rwo  # GKE standard SSD storage class
+    storage: 50Gi
+  rabbitmq:
+    additionalPlugins:
+      - rabbitmq_management
+      - rabbitmq_peer_discovery_k8s
+
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Permission
+metadata:
+  name: core-platform
+  namespace: rabbitmq-system
+spec:
+  vhost: "/"
+  user: "core-platform-service"
+  permissions:
+    configure: ".*"
+    read: ".*"
+    write: ".*"
+  rabbitmqClusterReference:
+    name: core-platform

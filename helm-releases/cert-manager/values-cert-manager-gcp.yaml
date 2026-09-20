@@ -1,0 +1,43 @@
+# cert-manager GCP install values
+# Version: v1.11.0 (confirmed from live OCI cluster image)
+# Chart: cert-manager v1.11.0
+#
+# Not Helm-managed on OCI - was applied via raw kubectl/ArgoCD
+# Building as proper Helm release for GCP for reproducibility
+#
+# Install command:
+#   helm repo add jetstack https://charts.jetstack.io
+#   helm install cert-manager jetstack/cert-manager --version v1.11.0 \
+#     -n cert-manager --create-namespace \
+#     -f values-cert-manager-gcp.yaml
+
+installCRDs: true
+
+image: 
+  repository: quay.io/jetstack/cert-manager-controller
+  tag: v1.11.0  # confirmed from live OCI cluster
+
+# Confirmed from OCI: two ClusterIssuers in use
+# - acme-http-issuer-traefik (active - all current certs use this)
+# - acme-http-issuer (older, still exists)
+# On GCP: DNS-01 decision still open (see context doc)
+# For now keeping HTTP-01 pattern - same as OCI
+# DNS-01 via Cloud DNS delegation is recommended but not yet decided
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 128Mi
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: false  # enable once prometheus is running
+
+# GKE-specific: needed for Gateway API integration
+

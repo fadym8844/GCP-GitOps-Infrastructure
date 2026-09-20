@@ -1,0 +1,23 @@
+{{- if .Values.instrumentation.enabled -}}
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: nodejs-instrumentation
+  namespace: {{ $.Release.Namespace }}
+spec:
+  exporter:
+    endpoint: http://opentelemetry-collector.opentelemetry-operator:4317
+  propagators:
+    - tracecontext
+    - baggage
+  sampler:
+    type: parentbased_traceidratio
+    argument: "0.05"
+  env:
+    - name: OTEL_METRICS_EXPORTER
+      value: otlp
+    - name: OTEL_TRACES_EXPORTER 
+      value: otlp
+    - name: OTEL_LOGS_EXPORTER
+      value: otlp
+{{- end -}}

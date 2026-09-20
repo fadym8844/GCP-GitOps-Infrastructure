@@ -1,0 +1,63 @@
+{{/*
+{{- if .Values.rabbitmq.enabled -}}
+apiVersion: rabbitmq.com/v1beta1
+kind: User
+metadata:
+  name: {{ include "service.fullname" . }}
+  namespace: rabbitmq-system
+spec:
+  rabbitmqClusterReference:
+    name: core-platform
+  importCredentialsSecret:
+    name: {{ template "service.fullname" . }}-rabbitmq-credentials 
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: Permission
+metadata:
+  name: {{ include "service.fullname" . }}-permission
+  namespace: rabbitmq-system
+spec:
+  vhost: {{ .Values.rabbitmq.vhost }}
+  user: {{ include "service.fullname" . }}
+  permissions:
+{{ toYaml .Values.rabbitmq.permissions | indent 4 }}
+  rabbitmqClusterReference:
+    name: core-platform
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  namespace: {{ $.Release.Namespace }}
+  name: {{ template "service.fullname" . }}-rabbitmq-credentials
+  annotations:
+    sealedsecrets.bitnami.com/cluster-wide: "true"
+spec:
+  encryptedData:
+    username: {{ .Values.rabbitmq.sealedUsername }}
+    password: {{ .Values.rabbitmq.sealedPassword }}
+  template:
+    metadata:
+      name: {{ template "service.fullname" . }}-rabbitmq-credentials
+      annotations:
+        sealedsecrets.bitnami.com/cluster-wide: "true"
+    type: Opaque
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  namespace: rabbitmq-system
+  name: {{ template "service.fullname" . }}-rabbitmq-credentials
+  annotations:
+    sealedsecrets.bitnami.com/cluster-wide: "true"
+spec:
+  encryptedData:
+    username: {{ .Values.rabbitmq.sealedUsername }}
+    password: {{ .Values.rabbitmq.sealedPassword }}
+  template:
+    metadata:
+      name: {{ template "service.fullname" . }}-rabbitmq-credentials
+      annotations:
+        sealedsecrets.bitnami.com/cluster-wide: "true"
+    type: Opaque
+{{- end -}}
+*/}}

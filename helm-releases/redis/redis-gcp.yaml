@@ -1,0 +1,121 @@
+# Redis for GCP
+# Not Helm-managed on OCI - raw kubectl StatefulSet
+# Keeping same pattern for GCP - simple, no unnecessary complexity
+#
+# Apply after cluster exists:
+#   kubectl apply -f redis-gcp.yaml
+#
+# Confirmed from OCI:
+#   - Namespace: redis
+#   - 2 replicas (core-platform-redis-master-0 and -1)
+#   - 16MB actual usage (very light)
+#   - Auth via secret core-platform-redis (key: redis-password)
+#   - Metrics sidecar running alongside main container
+
+---
+apiVersion: v1
+kind: Namespace
+metadata: 
+  name: redis
+
+---
+# Redis password secret - must be created before the StatefulSet
+# Get the actual password from OCI and create this secret manually:
+#   kubectl get secret core-platform-redis -n redis -o jsonpath='{.data.redis-password}' | base64 -d
+# Then:
+#   kubectl create secret generic core-platform-redis -n redis \
+#     --from-literal=redis-password=<actual-password>
+#
+# Do NOT put the real password in this file
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: core-platform-redis-master
+  namespace: redis
+spec:
+  serviceName: core-platform-redis-headless
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core-platform-redis
+  template:
+    metadata:
+      labels:
+        app: core-platform-redis
+    spec:
+      containers:
+        - name: redis
+          image: docker.io/bitnamilegacy/redis:8.0.1-debian-12-r2  # confirmed from OCI
+          command:
+            - redis-server
+            - --requirepass
+            - $(REDIS_PASSWORD)
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: core-platform-redis
+                  key: redis-password
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+        - name: metrics
+          image: oliver006/redis_exporter:latest
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: core-platform-redis
+                  key: redis-password
+          ports:
+            - containerPort: 9121
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: standard-rwo
+        resources:
+          requests:
+            storage: 10Gi  # 16MB actual usage - 10Gi is more than enough
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-platform-redis-master
+  namespace: redis
+spec:
+  selector:
+    app: core-platform-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-platform-redis-headless
+  namespace: redis
+spec:
+  clusterIP: None
+  selector:
+    app: core-platform-redis
+  ports:
+    - port: 6379

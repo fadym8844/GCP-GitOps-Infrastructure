@@ -1,0 +1,89 @@
+# cert-manager Certificate resources for GCP
+# Secret names match OCI exactly so all IngressRoutes reference the same names
+# Apply after cert-manager is installed:
+#   kubectl apply -f traefik-certificates-gcp.yaml
+#
+# Note: HTTP-01 challenge requires Traefik to be running and receiving traffic
+# on port 80. The ClusterIssuer uses acme-http-issuer-traefik which routes
+# ACME challenges through Traefik - same as OCI.
+
+---
+# Multi-SAN cert for all 6 app-facing hostnames - same as OCI core-platform-traefik-cert-prod
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: core-platform-traefik-cert-prod
+  namespace: core-platform 
+spec:
+  secretName: core-platform-traefik-cert-prod
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: acme-http-issuer-traefik
+  dnsNames:
+    - core-platform.com
+    - www.core-platform.com
+    - app.core-platform.com
+    - admin.core-platform.com
+    - api.core-platform.com
+    - ratbiplus.core-platform.com
+  usages:
+    - digital signature
+    - key encipherment
+
+---
+# ArgoCD cert - same as OCI cd-traefik-cert
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cd-traefik-cert
+  namespace: argocd
+spec:
+  secretName: cd-traefik-cert
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: acme-http-issuer-traefik
+  dnsNames:
+    - cd.core-platform.com
+  usages:
+    - digital signature
+    - key encipherment
+
+---
+# Grafana cert - same as OCI traefik-cert-monitoring-prod
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: traefik-cert-monitoring-prod
+  namespace: monitoring
+spec:
+  secretName: traefik-cert-monitoring-prod
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: acme-http-issuer-traefik
+  dnsNames:
+    - monitoring.core-platform.com
+  usages:
+    - digital signature
+    - key encipherment
+
+---
+# RabbitMQ cert - same as OCI rabbitmq-traefik-cert-prod
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-traefik-cert-prod
+  namespace: rabbitmq-system
+spec:
+  secretName: rabbitmq-traefik-cert-prod
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: acme-http-issuer-traefik
+  dnsNames:
+    - rabbitmq.core-platform.com
+  usages:
+    - digital signature
+    - key encipherment

@@ -1,0 +1,15 @@
+gateway:
+  enabled: true
+  # Reserved static IP name, created by the lb Terraform module.
+  ipName: core-platform-gateway-ip
+  # One cert per distinct group, all on the same listener - GKE resolves via
+  # SNI. Matches the real structure: one multi-SAN cert for app-facing
+  # hosts, plus separate certs for cd/monitoring/rabbitmq.
+  tlsSecretNames:
+    - core-platform-gateway-cert-prod
+  httpRedirect: true
+
+routes:
+  enabled: true
+  hosts: {}
+ 
