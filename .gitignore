@@ -1,0 +1,37 @@
+# Terraform local directories and binaries
+**/.terraform/
+**/.terraform/*
+
+# Terraform state files (sensitive)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Terraform plan files
+*.tfplan
+*.tfplan.*
+*.plan
+
+# Sensitive variable definition files
+*.tfvars
+*.tfvars.json
+*.auto.tfvars 
+*.auto.tfvars.json
+
+# Allow example / template files
+!*.tfvars.example
+!*.tfvars.sample
+
+# CLI configuration and crash logs
+.terraformrc
+terraform.rc
+crash.log
+crash.*.log
+
+# Temporary and editor backup files
+*.bak
+*.bak-*
+*~
+*.swp
+*.orig
+CLAUDE.md
